@@ -3,597 +3,330 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Circus Goblin Balance Panic</title>
+  <title>Circus Goblin: Peanut Panic (3D)</title>
   <style>
-    :root {
-      color-scheme: dark;
-      --bg1: #3d1f67;
-      --bg2: #150b33;
-      --accent: #ffdd55;
-      --danger: #ff5f7a;
-      --ok: #72ff8f;
-    }
-
+    :root { color-scheme: dark; }
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(circle at 50% 10%, #4b2879, #160c2d 65%);
+      color: #fff;
       display: grid;
       place-items: center;
-      background: radial-gradient(circle at 50% 20%, #6a2fb6 0%, var(--bg1) 35%, var(--bg2) 100%);
-      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-      color: white;
       overflow: hidden;
     }
-
-    .wrap {
-      width: min(92vw, 1000px);
+    .game-wrap {
+      width: min(96vw, 1120px);
+      aspect-ratio: 16 / 10;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.2);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
       position: relative;
+      background: #0f0a1d;
     }
-
-    canvas {
-      width: 100%;
-      height: auto;
-      display: block;
-      border-radius: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.22);
-      background: linear-gradient(to bottom, #4f2355 0%, #320f46 24%, #19092a 100%);
-      box-shadow: 0 28px 65px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(255, 255, 255, 0.06);
-    }
-
+    #game3d { width: 100%; height: 100%; }
+    #game3d canvas { width: 100% !important; height: 100% !important; display: block; }
     .hud {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      padding: 14px;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
+      position: absolute; inset: 0; pointer-events: none; padding: 12px;
+      display: grid; grid-template-rows: auto 1fr auto;
     }
-
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
-      font-weight: 700;
-      letter-spacing: 0.02em;
+    .top { display: flex; justify-content: space-between; font-weight: 700; text-shadow: 0 2px 8px #000; }
+    #hearts { color: #ff93ad; font-size: 1.3rem; }
+    .bottom { align-self: end; display: flex; justify-content: space-between; opacity: .95; font-size: .95rem; text-shadow: 0 2px 8px #000; }
+    .overlay {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: rgba(8, 3, 18, .65); backdrop-filter: blur(2px);
     }
-
-    #hearts {
-      font-size: 1.3rem;
-      color: #ff8fa3;
-    }
-
-    #status {
-      justify-self: end;
-      color: #ffe9a3;
-    }
-
-    .bottom {
-      align-self: end;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 8px;
-      font-size: 0.95rem;
-      opacity: 0.95;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
-    }
-
-    #overlay {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      background: rgba(11, 4, 21, 0.62);
-      backdrop-filter: blur(2px);
-      border-radius: 14px;
-      text-align: center;
-      padding: 24px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 180ms ease;
-    }
-
-    #overlay.show {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
     .panel {
-      max-width: 660px;
-      background: rgba(27, 11, 45, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.26);
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-      padding: 20px 22px;
+      width: min(90%, 640px); background: rgba(30, 14, 56, 0.88);
+      border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 20px;
+      text-align: center;
     }
-
-    .panel h1 {
-      margin: 0 0 12px;
-      font-size: clamp(1.4rem, 3vw, 2rem);
-      color: var(--accent);
-    }
-
-    .panel p {
-      margin: 6px 0;
-      line-height: 1.45;
-      color: #f1e6ff;
-    }
-
-    .panel button {
-      margin-top: 14px;
-      padding: 10px 16px;
-      font-size: 1rem;
-      font-weight: 700;
-      border-radius: 10px;
-      border: 0;
-      cursor: pointer;
-      color: #2c123f;
-      background: linear-gradient(120deg, #ffe88f, #ffc54c);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    .panel h1 { margin: 0 0 10px; color: #ffe78a; }
+    .panel p { margin: 8px 0; line-height: 1.4; }
+    button {
+      margin-top: 12px; border: 0; border-radius: 8px; padding: 10px 16px;
+      font-weight: 700; cursor: pointer; background: linear-gradient(120deg, #ffec9e, #ffb74f);
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <canvas id="game" width="1000" height="620" aria-label="Circus goblin balance game"></canvas>
+  <div class="game-wrap">
+    <div id="game3d"></div>
     <div class="hud">
       <div class="top">
         <div id="hearts">❤️❤️❤️</div>
-        <div id="status">Keep your goblin centered!</div>
+        <div id="status">Balance the goblin and dodge peanuts</div>
       </div>
       <div></div>
       <div class="bottom">
-        <div><strong>Move:</strong> WASD / Arrow keys</div>
-        <div><strong>Goal:</strong> Survive the peanut barrage and keep balance.</div>
+        <div><strong>Controls:</strong> WASD / Arrows</div>
+        <div><strong>Goal:</strong> Stay on the ball and survive</div>
       </div>
     </div>
-    <div id="overlay" class="show">
+    <div class="overlay" id="overlay">
       <div class="panel">
-        <h1>Circus Goblin: Peanut Panic</h1>
-        <p>You are a daring circus goblin balancing on a giant rolling ball.</p>
-        <p>Evil peanut magicians around the tent throw cursed peanuts to knock you off.</p>
-        <p><strong>WASD</strong> to balance. Stay inside the glowing ring, dodge peanuts, and survive.</p>
+        <h1>Circus Goblin: Peanut Panic (3D)</h1>
+        <p>You are a circus goblin balancing on a giant ball inside a cursed tent.</p>
+        <p>Evil peanut magicians throw peanuts to knock you down.</p>
+        <p>Use <strong>WASD</strong> to balance. You have 3 hearts.</p>
         <button id="startBtn">Start Show</button>
       </div>
     </div>
   </div>
 
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.1/build/three.module.js';
+
+    const mount = document.getElementById('game3d');
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('startBtn');
     const heartsEl = document.getElementById('hearts');
     const statusEl = document.getElementById('status');
 
-    const keys = Object.create(null);
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x140b24, 10, 58);
+
+    const camera = new THREE.PerspectiveCamera(52, 16/10, 0.1, 200);
+    camera.position.set(0, 8.2, 15.5);
+    camera.lookAt(0, 2.2, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    mount.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xe9d4ff, 0x281438, 1.0);
+    scene.add(hemi);
+    const key = new THREE.DirectionalLight(0xffedcb, 1.15);
+    key.position.set(5, 9, 7);
+    scene.add(key);
+
+    const floor = new THREE.Mesh(
+      new THREE.CylinderGeometry(12, 12, 0.8, 64, 1, false),
+      new THREE.MeshStandardMaterial({ color: 0x5a235f, roughness: 0.85 })
+    );
+    floor.position.y = -3.8;
+    scene.add(floor);
+
+    const tent = new THREE.Mesh(
+      new THREE.CylinderGeometry(13.5, 15.5, 16, 64, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0x421660, side: THREE.BackSide, roughness: 0.9, metalness: 0.1 })
+    );
+    tent.position.y = 2.5;
+    scene.add(tent);
+
+    const stripeGroup = new THREE.Group();
+    for (let i = 0; i < 16; i++) {
+      const stripe = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.2, 14),
+        new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffb0c6 : 0xffdf9c, transparent: true, opacity: 0.11, side: THREE.DoubleSide })
+      );
+      const a = (i / 16) * Math.PI * 2;
+      stripe.position.set(Math.cos(a) * 12.7, 2.6, Math.sin(a) * 12.7);
+      stripe.lookAt(0, 2.5, 0);
+      stripeGroup.add(stripe);
+    }
+    scene.add(stripeGroup);
+
+    const ballRadius = 2.4;
+    const ball = new THREE.Mesh(
+      new THREE.SphereGeometry(ballRadius, 48, 48),
+      new THREE.MeshStandardMaterial({ color: 0xf48b3d, roughness: 0.45, metalness: 0.06 })
+    );
+    ball.position.y = -1.2;
+    scene.add(ball);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(3.6, 0.06, 18, 80),
+      new THREE.MeshBasicMaterial({ color: 0xffec88, transparent: true, opacity: 0.9 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = -3.35;
+    scene.add(ring);
+
+    const goblin = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.45, 0.9, 8, 14), new THREE.MeshStandardMaterial({ color: 0x50d870, roughness: 0.65 }));
+    body.position.y = 0.7;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), new THREE.MeshStandardMaterial({ color: 0x72f68e, roughness: 0.6 }));
+    head.position.y = 1.55;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.6, 10), new THREE.MeshStandardMaterial({ color: 0xf9efbf }));
+    pole.rotation.z = Math.PI / 2;
+    pole.position.set(0, 1.05, 0);
+    goblin.add(body, head, pole);
+    scene.add(goblin);
+
+    const magicians = [];
+    const mageGroup = new THREE.Group();
+    scene.add(mageGroup);
+    for (let i = 0; i < 7; i++) {
+      const g = new THREE.Group();
+      const robe = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.3, 16), new THREE.MeshStandardMaterial({ color: 0x2d2450 }));
+      const peanutHead = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 16), new THREE.MeshStandardMaterial({ color: 0xd7af77 }));
+      peanutHead.position.y = 0.55;
+      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.7, 12), new THREE.MeshStandardMaterial({ color: 0x7656d8 }));
+      hat.position.y = 1.06;
+      g.add(robe, peanutHead, hat);
+      const a = (i / 7) * Math.PI * 2;
+      const r = 8.8;
+      g.position.set(Math.cos(a) * r, -3.2, Math.sin(a) * r);
+      g.lookAt(0, -2, 0);
+      mageGroup.add(g);
+      magicians.push({ mesh: g, cooldown: 0.4 + Math.random(), phase: Math.random() * 10 });
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
     const state = {
       running: false,
-      time: 0,
       score: 0,
       hearts: 3,
-      hitFlash: 0,
-      peanuts: [],
-      magicians: [],
-      spawnTimer: 0,
-      goblin: {
-        x: 0,
-        y: 0,
-        vx: 0,
-        vy: 0,
-        tiltX: 0,
-        tiltY: 0
-      },
-      ball: {
-        radius: 145,
-        wobble: 0
-      }
+      x: 0,
+      z: 0,
+      vx: 0,
+      vz: 0,
+      hitCd: 0,
+      peanuts: []
     };
 
-    const arena = {
-      cx: canvas.width / 2,
-      cy: canvas.height * 0.66,
-      rx: 300,
-      ry: 120
-    };
-
-    function resetGame() {
+    function reset() {
       state.running = true;
-      state.time = 0;
       state.score = 0;
       state.hearts = 3;
-      state.hitFlash = 0;
+      state.x = 0; state.z = 0; state.vx = 0; state.vz = 0; state.hitCd = 0;
+      state.peanuts.forEach(p => scene.remove(p.mesh));
       state.peanuts = [];
-      state.spawnTimer = 0;
-      state.goblin.x = 0;
-      state.goblin.y = 0;
-      state.goblin.vx = 0;
-      state.goblin.vy = 0;
-      state.goblin.tiltX = 0;
-      state.goblin.tiltY = 0;
-      state.ball.wobble = 0;
-      heartsEl.textContent = '❤️'.repeat(state.hearts);
-      statusEl.textContent = 'Keep your goblin centered!';
+      magicians.forEach(m => { m.cooldown = 0.4 + Math.random(); });
+      heartsEl.textContent = '❤️❤️❤️';
+      statusEl.textContent = 'Balance the goblin and dodge peanuts';
+      overlay.style.display = 'none';
     }
 
-    function setupMagicians() {
-      const ring = [
-        { a: 210, depth: 0.7 },
-        { a: 260, depth: 0.9 },
-        { a: 310, depth: 1.05 },
-        { a: 20, depth: 0.75 },
-        { a: 80, depth: 0.92 },
-        { a: 140, depth: 1.08 }
-      ];
-      state.magicians = ring.map((m, i) => {
-        const rad = m.a * Math.PI / 180;
-        return {
-          id: i,
-          x: arena.cx + Math.cos(rad) * (arena.rx * 1.33),
-          y: arena.cy + Math.sin(rad) * (arena.ry * 1.7),
-          depth: m.depth,
-          pulse: Math.random() * Math.PI * 2,
-          throwCooldown: Math.random() * 1.4 + 0.2
-        };
-      });
-    }
-
-    function spawnPeanut(fromMage) {
-      const gScreen = worldToScreen(state.goblin.x, state.goblin.y);
-      const sx = fromMage.x;
-      const sy = fromMage.y - 35 * fromMage.depth;
-      const dx = gScreen.x - sx;
-      const dy = gScreen.y - 50 - sy;
-      const len = Math.hypot(dx, dy);
-      const speed = 220 + Math.random() * 120 + state.score * 2.5;
-      state.peanuts.push({
-        x: sx,
-        y: sy,
-        z: 0,
-        vx: dx / len * speed,
-        vy: dy / len * speed,
-        spin: Math.random() * Math.PI * 2,
-        life: 4
-      });
-    }
-
-    function worldToScreen(wx, wy) {
-      return {
-        x: arena.cx + wx,
-        y: arena.cy + wy * 0.66
-      };
-    }
-
-    function update(dt) {
-      if (!state.running) return;
-
-      state.time += dt;
-      state.score += dt * 10;
-      state.hitFlash = Math.max(0, state.hitFlash - dt * 3);
-
-      const inputX = (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0);
-      const inputY = (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) - (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0);
-
-      const g = state.goblin;
-      const accel = 450;
-      const friction = 4.8;
-      const autoCenter = 1.1;
-
-      g.vx += (inputX * accel - g.x * autoCenter) * dt;
-      g.vy += (inputY * accel - g.y * autoCenter) * dt;
-      g.vx *= Math.exp(-friction * dt);
-      g.vy *= Math.exp(-friction * dt);
-      g.x += g.vx * dt;
-      g.y += g.vy * dt;
-
-      const normalized = Math.sqrt((g.x * g.x) / (state.ball.radius ** 2) + (g.y * g.y) / ((state.ball.radius * 0.75) ** 2));
-      if (normalized > 1) {
-        const scale = 1 / normalized;
-        g.x *= scale;
-        g.y *= scale;
-        g.vx *= 0.4;
-        g.vy *= 0.4;
-      }
-
-      g.tiltX = g.vx * 0.02;
-      g.tiltY = g.vy * 0.02;
-      state.ball.wobble = Math.min(1.1, Math.hypot(g.x, g.y) / 130);
-
-      // Magician throw logic
-      state.magicians.forEach(m => {
-        m.pulse += dt * (1.3 + m.depth * 0.25);
-        m.throwCooldown -= dt;
-        if (m.throwCooldown <= 0) {
-          spawnPeanut(m);
-          const base = Math.max(0.42, 1.3 - state.score * 0.003);
-          m.throwCooldown = base + Math.random() * 0.95;
-        }
-      });
-
-      // Peanut simulation + collision
-      const gScreen = worldToScreen(g.x, g.y);
-      state.peanuts = state.peanuts.filter(p => {
-        p.life -= dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.spin += dt * 18;
-
-        const d = Math.hypot(p.x - gScreen.x, p.y - (gScreen.y - 55));
-        if (d < 28) {
-          onHit();
-          return false;
-        }
-        return p.life > 0 && p.x > -100 && p.x < canvas.width + 100 && p.y > -80 && p.y < canvas.height + 100;
-      });
-
-      const drift = Math.hypot(g.x, g.y);
-      if (drift > 105) {
-        onHit(dt * 0.8);
-      }
-
-      statusEl.textContent = `Score ${Math.floor(state.score)} • Drift ${Math.round(drift)} / 145`;
-    }
-
-    let hitCooldown = 0;
-    function onHit(force = 1) {
-      if (hitCooldown > 0) return;
-      hitCooldown = 0.65;
-      state.hitFlash = Math.min(1, state.hitFlash + 0.8 * force);
+    function loseHeart(reason = 'Ouch!') {
+      if (state.hitCd > 0 || !state.running) return;
+      state.hitCd = 0.65;
       state.hearts -= 1;
       heartsEl.textContent = '❤️'.repeat(Math.max(0, state.hearts));
-      state.goblin.vx *= -0.6;
-      state.goblin.vy *= -0.6;
+      statusEl.textContent = `${reason} • Hearts: ${state.hearts}`;
       if (state.hearts <= 0) {
         state.running = false;
-        const final = Math.floor(state.score);
-        overlay.classList.add('show');
-        overlay.querySelector('h1').textContent = 'The Goblin Has Fallen!';
-        overlay.querySelector('p').textContent = `Final Score: ${final}. Those peanut wizards are relentless.`;
-        overlay.querySelectorAll('p')[1].textContent = 'Hit Start Show to jump back on the ball.';
+        overlay.style.display = 'grid';
+        overlay.querySelector('h1').textContent = 'The Goblin Tumbles!';
+        overlay.querySelectorAll('p')[0].textContent = `Final score: ${Math.floor(state.score)}`;
+        overlay.querySelectorAll('p')[1].textContent = 'The evil peanut magicians win this round.';
+        overlay.querySelectorAll('p')[2].textContent = 'Click Start Show to try again.';
       }
     }
 
-    function drawTent() {
-      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      grad.addColorStop(0, '#6f2a6c');
-      grad.addColorStop(0.46, '#4b1a5f');
-      grad.addColorStop(1, '#1d0a2a');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function spawnPeanut(fromPos, speed) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xe8cb8c, roughness: 0.55 })
+      );
+      mesh.position.copy(fromPos).add(new THREE.Vector3(0, 0.65, 0));
+      scene.add(mesh);
+      const target = new THREE.Vector3(ball.position.x + state.x, ball.position.y + ballRadius + 0.9, ball.position.z + state.z);
+      const dir = target.clone().sub(mesh.position).normalize();
+      state.peanuts.push({ mesh, vel: dir.multiplyScalar(speed), life: 4 });
+    }
 
-      // tent stripes (pseudo 3D perspective)
-      for (let i = -2; i < 8; i++) {
-        const x = i * 170 + ((Math.sin(state.time * 0.2) * 18) % 170);
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x + 150, 0);
-        ctx.lineTo(arena.cx + (x - arena.cx) * 0.25 + 70, arena.cy - 165);
-        ctx.lineTo(arena.cx + (x - arena.cx) * 0.25 - 70, arena.cy - 165);
-        ctx.closePath();
-        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,132,162,0.15)' : 'rgba(255,227,157,0.12)';
-        ctx.fill();
+    function resize() {
+      const w = mount.clientWidth;
+      const h = mount.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.033, clock.getDelta());
+
+      stripeGroup.rotation.y += dt * 0.07;
+      ring.material.opacity = 0.7 + Math.sin(clock.elapsedTime * 2.2) * 0.2;
+
+      if (state.running) {
+        state.score += dt * 10;
+        state.hitCd = Math.max(0, state.hitCd - dt);
+
+        const ix = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
+        const iz = ((keys.KeyS || keys.ArrowDown) ? 1 : 0) - ((keys.KeyW || keys.ArrowUp) ? 1 : 0);
+
+        const accel = 8.9;
+        const friction = 4.4;
+        const centerPull = 1.6;
+
+        state.vx += (ix * accel - state.x * centerPull) * dt;
+        state.vz += (iz * accel - state.z * centerPull) * dt;
+        state.vx *= Math.exp(-friction * dt);
+        state.vz *= Math.exp(-friction * dt);
+
+        state.x += state.vx * dt;
+        state.z += state.vz * dt;
+
+        const d = Math.hypot(state.x, state.z);
+        if (d > 2.2) {
+          const s = 2.2 / d;
+          state.x *= s; state.z *= s;
+          state.vx *= 0.45; state.vz *= 0.45;
+        }
+
+        if (d > 1.7) loseHeart('You almost fell off the ball');
+
+        magicians.forEach((m, i) => {
+          m.phase += dt;
+          m.mesh.position.y = -3.2 + Math.sin(m.phase * 2 + i) * 0.09;
+          m.cooldown -= dt;
+          if (m.cooldown <= 0) {
+            spawnPeanut(m.mesh.position, 5.2 + Math.random() * 2 + state.score * 0.02);
+            m.cooldown = Math.max(0.42, 1.25 - state.score * 0.003) + Math.random() * 0.7;
+          }
+        });
+
+        state.peanuts = state.peanuts.filter((p) => {
+          p.life -= dt;
+          p.mesh.position.addScaledVector(p.vel, dt);
+          p.mesh.rotation.x += dt * 10;
+          p.mesh.rotation.y += dt * 12;
+
+          const target = new THREE.Vector3(ball.position.x + state.x, ball.position.y + ballRadius + 0.95, ball.position.z + state.z);
+          if (p.mesh.position.distanceTo(target) < 0.45) {
+            scene.remove(p.mesh);
+            loseHeart('A peanut hit you');
+            return false;
+          }
+          if (p.life <= 0) { scene.remove(p.mesh); return false; }
+          return true;
+        });
+
+        ball.rotation.z += state.vx * dt * 0.8;
+        ball.rotation.x -= state.vz * dt * 0.8;
+
+        goblin.position.set(ball.position.x + state.x, ball.position.y + ballRadius + 0.4, ball.position.z + state.z);
+        goblin.rotation.z = -state.vx * 0.12;
+        goblin.rotation.x = state.vz * 0.12;
+
+        const camTarget = new THREE.Vector3(0, 2.2, 0);
+        camera.position.lerp(new THREE.Vector3(state.x * 1.8, 8.2, 15.5 + state.z * 0.45), 0.06);
+        camera.lookAt(camTarget);
+
+        statusEl.textContent = `Score ${Math.floor(state.score)} • Drift ${d.toFixed(2)} / 2.2`;
       }
 
-      // floor ellipse
-      ctx.beginPath();
-      ctx.ellipse(arena.cx, arena.cy + 46, arena.rx * 1.17, arena.ry * 1.34, 0, 0, Math.PI * 2);
-      const floorGrad = ctx.createRadialGradient(arena.cx, arena.cy + 30, 80, arena.cx, arena.cy + 40, arena.rx * 1.2);
-      floorGrad.addColorStop(0, '#6d2b6b');
-      floorGrad.addColorStop(1, '#230c32');
-      ctx.fillStyle = floorGrad;
-      ctx.fill();
-
-      // balance zone
-      ctx.beginPath();
-      ctx.ellipse(arena.cx, arena.cy + 30, 170, 65, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 232, 125, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.setLineDash([6, 8]);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.stroke();
-      ctx.setLineDash([]);
+      renderer.render(scene, camera);
     }
 
-    function drawMagician(m) {
-      const bob = Math.sin(m.pulse) * 4;
-      const y = m.y + bob;
-      const size = 0.72 + m.depth * 0.45;
-
-      ctx.save();
-      ctx.translate(m.x, y);
-      ctx.scale(size, size);
-
-      // robe
-      ctx.fillStyle = '#2f254e';
-      ctx.beginPath();
-      ctx.moveTo(-20, 35);
-      ctx.lineTo(20, 35);
-      ctx.lineTo(30, 70);
-      ctx.lineTo(-30, 70);
-      ctx.closePath();
-      ctx.fill();
-
-      // peanut head
-      ctx.fillStyle = '#d6af75';
-      ctx.beginPath();
-      ctx.ellipse(0, 18, 17, 26, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#9f7647';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, -2);
-      ctx.lineTo(0, 38);
-      ctx.stroke();
-
-      // eyes
-      ctx.fillStyle = '#1f1123';
-      ctx.beginPath();
-      ctx.arc(-6, 16, 2.3, 0, Math.PI * 2);
-      ctx.arc(6, 16, 2.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // hat
-      ctx.fillStyle = '#6d4ecf';
-      ctx.beginPath();
-      ctx.moveTo(-20, 2);
-      ctx.lineTo(20, 2);
-      ctx.lineTo(0, -40);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-
-    function drawBallAndGoblin() {
-      const g = state.goblin;
-      const center = worldToScreen(g.x * 0.2, g.y * 0.2);
-      const wobbleX = g.x * 0.12;
-      const wobbleY = g.y * 0.08;
-
-      ctx.save();
-      ctx.translate(center.x + wobbleX, center.y + wobbleY);
-
-      // shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.beginPath();
-      ctx.ellipse(0, state.ball.radius * 0.92, 150, 48, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // ball
-      const grad = ctx.createRadialGradient(-45, -60, 10, 0, 0, state.ball.radius);
-      grad.addColorStop(0, '#ffd8ac');
-      grad.addColorStop(0.5, '#ff9d56');
-      grad.addColorStop(1, '#d45631');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(0, 0, state.ball.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // ball stripes
-      ctx.strokeStyle = 'rgba(255, 245, 195, 0.65)';
-      ctx.lineWidth = 4;
-      for (let i = -2; i <= 2; i++) {
-        const t = i * 0.46 + state.time * 0.9 + g.x * 0.004;
-        ctx.beginPath();
-        ctx.ellipse(Math.sin(t) * 36, 0, state.ball.radius * (0.2 + Math.abs(Math.cos(t)) * 0.75), state.ball.radius, 0, -Math.PI / 2, Math.PI / 2);
-        ctx.stroke();
-      }
-
-      // goblin offset from center on top of ball
-      const gx = g.x * 0.86;
-      const gy = -state.ball.radius + 26 + g.y * 0.58;
-      ctx.translate(gx, gy);
-      ctx.rotate(g.tiltX * 0.02);
-
-      // goblin body
-      ctx.fillStyle = '#4cd86d';
-      ctx.beginPath();
-      ctx.ellipse(0, 6, 22, 26, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // goblin head
-      ctx.fillStyle = '#6ef78b';
-      ctx.beginPath();
-      ctx.ellipse(0, -26, 21, 19, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // ears
-      ctx.fillStyle = '#63ea86';
-      ctx.beginPath();
-      ctx.moveTo(-16, -30); ctx.lineTo(-31, -24); ctx.lineTo(-15, -20); ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(16, -30); ctx.lineTo(31, -24); ctx.lineTo(15, -20); ctx.fill();
-
-      // face
-      ctx.fillStyle = '#1f3d28';
-      ctx.beginPath();
-      ctx.arc(-6, -28, 2.2, 0, Math.PI * 2);
-      ctx.arc(6, -28, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#1f3d28';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, -21, 6, 0.25, 2.9);
-      ctx.stroke();
-
-      // balancing pole
-      ctx.strokeStyle = '#fff1af';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(-50 - g.tiltX, -4);
-      ctx.lineTo(50 - g.tiltX, -14);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    function drawPeanut(p) {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.spin);
-      ctx.fillStyle = '#e9c98b';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 6, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#a27d48';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, -5);
-      ctx.lineTo(0, 5);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function render() {
-      drawTent();
-
-      // sort magicians and peanuts for faux depth
-      const sorted = [...state.magicians].sort((a, b) => a.depth - b.depth);
-      sorted.forEach(drawMagician);
-
-      drawBallAndGoblin();
-      state.peanuts.forEach(drawPeanut);
-
-      if (state.hitFlash > 0) {
-        ctx.fillStyle = `rgba(255, 70, 80, ${state.hitFlash * 0.35})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-
-    let previous = performance.now();
-    function loop(now) {
-      const dt = Math.min(0.033, (now - previous) / 1000);
-      previous = now;
-      hitCooldown = Math.max(0, hitCooldown - dt);
-      update(dt);
-      render();
-      requestAnimationFrame(loop);
-    }
-
-    window.addEventListener('keydown', e => {
-      keys[e.code] = true;
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
-        e.preventDefault();
-      }
-    });
-    window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-    startBtn.addEventListener('click', () => {
-      overlay.classList.remove('show');
-      overlay.querySelector('h1').textContent = 'Circus Goblin: Peanut Panic';
-      overlay.querySelectorAll('p')[0].textContent = 'You are a daring circus goblin balancing on a giant rolling ball.';
-      overlay.querySelectorAll('p')[1].textContent = 'Evil peanut magicians around the tent throw cursed peanuts to knock you off.';
-      resetGame();
-    });
-
-    setupMagicians();
-    render();
-    requestAnimationFrame(loop);
+    startBtn.addEventListener('click', reset);
+    overlay.style.display = 'grid';
+    animate();
   </script>
 </body>
 </html>
