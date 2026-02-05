@@ -3,329 +3,293 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Circus Goblin: Peanut Panic (3D)</title>
+  <title>Goblin FBX Walker</title>
   <style>
-    :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-height: 100vh;
+      overflow: hidden;
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: radial-gradient(circle at 50% 10%, #4b2879, #160c2d 65%);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
+      background: #111;
+      color: #f5f5f5;
     }
-    .game-wrap {
-      width: min(96vw, 1120px);
-      aspect-ratio: 16 / 10;
-      border-radius: 14px;
-      overflow: hidden;
-      border: 2px solid rgba(255,255,255,0.2);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    #app {
+      width: 100vw;
+      height: 100vh;
       position: relative;
-      background: #0f0a1d;
     }
-    #game3d { width: 100%; height: 100%; }
-    #game3d canvas { width: 100% !important; height: 100% !important; display: block; }
-    .hud {
-      position: absolute; inset: 0; pointer-events: none; padding: 12px;
-      display: grid; grid-template-rows: auto 1fr auto;
-    }
-    .top { display: flex; justify-content: space-between; font-weight: 700; text-shadow: 0 2px 8px #000; }
-    #hearts { color: #ff93ad; font-size: 1.3rem; }
-    .bottom { align-self: end; display: flex; justify-content: space-between; opacity: .95; font-size: .95rem; text-shadow: 0 2px 8px #000; }
-    .overlay {
-      position: absolute; inset: 0; display: grid; place-items: center;
-      background: rgba(8, 3, 18, .65); backdrop-filter: blur(2px);
+    #hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 12px;
     }
     .panel {
-      width: min(90%, 640px); background: rgba(30, 14, 56, 0.88);
-      border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 20px;
-      text-align: center;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.35;
+      backdrop-filter: blur(2px);
+      max-width: min(520px, 95vw);
     }
-    .panel h1 { margin: 0 0 10px; color: #ffe78a; }
-    .panel p { margin: 8px 0; line-height: 1.4; }
-    button {
-      margin-top: 12px; border: 0; border-radius: 8px; padding: 10px 16px;
-      font-weight: 700; cursor: pointer; background: linear-gradient(120deg, #ffec9e, #ffb74f);
+    #status {
+      color: #ffdd9e;
+      font-weight: 700;
+    }
+    code {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 4px;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="game-wrap">
-    <div id="game3d"></div>
-    <div class="hud">
-      <div class="top">
-        <div id="hearts">❤️❤️❤️</div>
-        <div id="status">Balance the goblin and dodge peanuts</div>
-      </div>
-      <div></div>
-      <div class="bottom">
-        <div><strong>Controls:</strong> WASD / Arrows</div>
-        <div><strong>Goal:</strong> Stay on the ball and survive</div>
-      </div>
+  <div id="app"></div>
+  <div id="hud">
+    <div class="panel">
+      <div><strong>Controls:</strong> WASD move, Space jump</div>
+      <div><strong>Animations:</strong> Idle / Walk / Jump (from your FBX files)</div>
     </div>
-    <div class="overlay" id="overlay">
-      <div class="panel">
-        <h1>Circus Goblin: Peanut Panic (3D)</h1>
-        <p>You are a circus goblin balancing on a giant ball inside a cursed tent.</p>
-        <p>Evil peanut magicians throw peanuts to knock you down.</p>
-        <p>Use <strong>WASD</strong> to balance. You have 3 hearts.</p>
-        <button id="startBtn">Start Show</button>
-      </div>
-    </div>
+    <div class="panel" id="status">Loading goblin assets...</div>
   </div>
 
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.160.1/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.160.1/examples/jsm/controls/OrbitControls.js';
+    import { FBXLoader } from 'https://unpkg.com/three@0.160.1/examples/jsm/loaders/FBXLoader.js';
 
-    const mount = document.getElementById('game3d');
-    const overlay = document.getElementById('overlay');
-    const startBtn = document.getElementById('startBtn');
-    const heartsEl = document.getElementById('hearts');
+    /**
+     * Update these paths to match the files you add to this repo.
+     * Example layout:
+     * assets/goblin/goblin.fbx
+     * assets/animations/walk.fbx
+     * assets/animations/jump.fbx
+     */
+    const ASSET_PATHS = {
+      model: './assets/goblin/goblin.fbx',
+      walk: './assets/animations/walk.fbx',
+      jump: './assets/animations/jump.fbx'
+    };
+
+    const app = document.getElementById('app');
     const statusEl = document.getElementById('status');
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x140b24, 10, 58);
+    scene.background = new THREE.Color(0x1e2433);
+    scene.fog = new THREE.Fog(0x1e2433, 18, 90);
 
-    const camera = new THREE.PerspectiveCamera(52, 16/10, 0.1, 200);
-    camera.position.set(0, 8.2, 15.5);
-    camera.lookAt(0, 2.2, 0);
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+    camera.position.set(0, 5, 11);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    mount.appendChild(renderer.domElement);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    app.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xe9d4ff, 0x281438, 1.0);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 2, 0);
+
+    const hemi = new THREE.HemisphereLight(0xbecbff, 0x202020, 1.0);
     scene.add(hemi);
-    const key = new THREE.DirectionalLight(0xffedcb, 1.15);
-    key.position.set(5, 9, 7);
-    scene.add(key);
 
-    const floor = new THREE.Mesh(
-      new THREE.CylinderGeometry(12, 12, 0.8, 64, 1, false),
-      new THREE.MeshStandardMaterial({ color: 0x5a235f, roughness: 0.85 })
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(8, 14, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    scene.add(sun);
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(120, 120),
+      new THREE.MeshStandardMaterial({ color: 0x45605a, roughness: 0.95, metalness: 0.02 })
     );
-    floor.position.y = -3.8;
-    scene.add(floor);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-    const tent = new THREE.Mesh(
-      new THREE.CylinderGeometry(13.5, 15.5, 16, 64, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0x421660, side: THREE.BackSide, roughness: 0.9, metalness: 0.1 })
-    );
-    tent.position.y = 2.5;
-    scene.add(tent);
+    const grid = new THREE.GridHelper(120, 120, 0x99bbcc, 0x66808a);
+    grid.position.y = 0.01;
+    scene.add(grid);
 
-    const stripeGroup = new THREE.Group();
-    for (let i = 0; i < 16; i++) {
-      const stripe = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.2, 14),
-        new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffb0c6 : 0xffdf9c, transparent: true, opacity: 0.11, side: THREE.DoubleSide })
-      );
-      const a = (i / 16) * Math.PI * 2;
-      stripe.position.set(Math.cos(a) * 12.7, 2.6, Math.sin(a) * 12.7);
-      stripe.lookAt(0, 2.5, 0);
-      stripeGroup.add(stripe);
-    }
-    scene.add(stripeGroup);
-
-    const ballRadius = 2.4;
-    const ball = new THREE.Mesh(
-      new THREE.SphereGeometry(ballRadius, 48, 48),
-      new THREE.MeshStandardMaterial({ color: 0xf48b3d, roughness: 0.45, metalness: 0.06 })
-    );
-    ball.position.y = -1.2;
-    scene.add(ball);
-
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(3.6, 0.06, 18, 80),
-      new THREE.MeshBasicMaterial({ color: 0xffec88, transparent: true, opacity: 0.9 })
-    );
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = -3.35;
-    scene.add(ring);
-
-    const goblin = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.45, 0.9, 8, 14), new THREE.MeshStandardMaterial({ color: 0x50d870, roughness: 0.65 }));
-    body.position.y = 0.7;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), new THREE.MeshStandardMaterial({ color: 0x72f68e, roughness: 0.6 }));
-    head.position.y = 1.55;
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.6, 10), new THREE.MeshStandardMaterial({ color: 0xf9efbf }));
-    pole.rotation.z = Math.PI / 2;
-    pole.position.set(0, 1.05, 0);
-    goblin.add(body, head, pole);
-    scene.add(goblin);
-
-    const magicians = [];
-    const mageGroup = new THREE.Group();
-    scene.add(mageGroup);
-    for (let i = 0; i < 7; i++) {
-      const g = new THREE.Group();
-      const robe = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.3, 16), new THREE.MeshStandardMaterial({ color: 0x2d2450 }));
-      const peanutHead = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 16), new THREE.MeshStandardMaterial({ color: 0xd7af77 }));
-      peanutHead.position.y = 0.55;
-      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.7, 12), new THREE.MeshStandardMaterial({ color: 0x7656d8 }));
-      hat.position.y = 1.06;
-      g.add(robe, peanutHead, hat);
-      const a = (i / 7) * Math.PI * 2;
-      const r = 8.8;
-      g.position.set(Math.cos(a) * r, -3.2, Math.sin(a) * r);
-      g.lookAt(0, -2, 0);
-      mageGroup.add(g);
-      magicians.push({ mesh: g, cooldown: 0.4 + Math.random(), phase: Math.random() * 10 });
-    }
-
-    const keys = {};
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+    const keys = Object.create(null);
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+    });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-    const state = {
-      running: false,
-      score: 0,
-      hearts: 3,
-      x: 0,
-      z: 0,
-      vx: 0,
-      vz: 0,
-      hitCd: 0,
-      peanuts: []
+    const clock = new THREE.Clock();
+    const loader = new FBXLoader();
+
+    let goblin;
+    let mixer;
+    const actions = { idle: null, walk: null, jump: null };
+    let activeActionName = 'idle';
+
+    const player = {
+      velocity: new THREE.Vector3(),
+      moveSpeed: 4.5,
+      jumpSpeed: 7.5,
+      gravity: 20,
+      onGround: true
     };
 
-    function reset() {
-      state.running = true;
-      state.score = 0;
-      state.hearts = 3;
-      state.x = 0; state.z = 0; state.vx = 0; state.vz = 0; state.hitCd = 0;
-      state.peanuts.forEach(p => scene.remove(p.mesh));
-      state.peanuts = [];
-      magicians.forEach(m => { m.cooldown = 0.4 + Math.random(); });
-      heartsEl.textContent = '❤️❤️❤️';
-      statusEl.textContent = 'Balance the goblin and dodge peanuts';
-      overlay.style.display = 'none';
+    function setStatus(msg, isError = false) {
+      statusEl.textContent = msg;
+      statusEl.style.color = isError ? '#ff9ca3' : '#ffdd9e';
     }
 
-    function loseHeart(reason = 'Ouch!') {
-      if (state.hitCd > 0 || !state.running) return;
-      state.hitCd = 0.65;
-      state.hearts -= 1;
-      heartsEl.textContent = '❤️'.repeat(Math.max(0, state.hearts));
-      statusEl.textContent = `${reason} • Hearts: ${state.hearts}`;
-      if (state.hearts <= 0) {
-        state.running = false;
-        overlay.style.display = 'grid';
-        overlay.querySelector('h1').textContent = 'The Goblin Tumbles!';
-        overlay.querySelectorAll('p')[0].textContent = `Final score: ${Math.floor(state.score)}`;
-        overlay.querySelectorAll('p')[1].textContent = 'The evil peanut magicians win this round.';
-        overlay.querySelectorAll('p')[2].textContent = 'Click Start Show to try again.';
+    function playAction(name, fade = 0.15) {
+      if (!actions[name] || activeActionName === name) return;
+      const next = actions[name];
+      const current = actions[activeActionName];
+      next.reset().fadeIn(fade).play();
+      if (current) current.fadeOut(fade);
+      activeActionName = name;
+    }
+
+    function makeIdleClipFromCurrentPose(model) {
+      const idleTracks = [];
+      model.traverse((obj) => {
+        if (!obj.isBone) return;
+        idleTracks.push(new THREE.VectorKeyframeTrack(`${obj.name}.position`, [0], obj.position.toArray()));
+        idleTracks.push(new THREE.QuaternionKeyframeTrack(`${obj.name}.quaternion`, [0], obj.quaternion.toArray()));
+        idleTracks.push(new THREE.VectorKeyframeTrack(`${obj.name}.scale`, [0], obj.scale.toArray()));
+      });
+      return new THREE.AnimationClip('idle_pose', 1, idleTracks);
+    }
+
+    async function loadFbx(path, label) {
+      return new Promise((resolve, reject) => {
+        loader.load(path, resolve, undefined, (err) => reject(new Error(`Failed to load ${label}: ${err?.message || err}`)));
+      });
+    }
+
+    async function initGoblin() {
+      try {
+        const modelFbx = await loadFbx(ASSET_PATHS.model, 'model FBX');
+        goblin = modelFbx;
+        goblin.scale.setScalar(0.01);
+        goblin.position.set(0, 0, 0);
+        goblin.traverse((obj) => {
+          if (obj.isMesh) {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+          }
+        });
+        scene.add(goblin);
+
+        mixer = new THREE.AnimationMixer(goblin);
+
+        if (modelFbx.animations?.length) {
+          actions.idle = mixer.clipAction(modelFbx.animations[0]);
+        } else {
+          actions.idle = mixer.clipAction(makeIdleClipFromCurrentPose(goblin));
+        }
+
+        const walkFbx = await loadFbx(ASSET_PATHS.walk, 'walk animation FBX');
+        if (walkFbx.animations?.[0]) {
+          actions.walk = mixer.clipAction(walkFbx.animations[0]);
+          actions.walk.loop = THREE.LoopRepeat;
+          actions.walk.clampWhenFinished = false;
+        }
+
+        const jumpFbx = await loadFbx(ASSET_PATHS.jump, 'jump animation FBX');
+        if (jumpFbx.animations?.[0]) {
+          actions.jump = mixer.clipAction(jumpFbx.animations[0]);
+          actions.jump.loop = THREE.LoopOnce;
+          actions.jump.clampWhenFinished = true;
+        }
+
+        actions.idle?.play();
+        activeActionName = 'idle';
+
+        setStatus('Loaded. Move with WASD, jump with Space.');
+      } catch (err) {
+        console.error(err);
+        setStatus(`${err.message}. Check ASSET_PATHS in index.html.`, true);
       }
     }
 
-    function spawnPeanut(fromPos, speed) {
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.13, 12, 12),
-        new THREE.MeshStandardMaterial({ color: 0xe8cb8c, roughness: 0.55 })
-      );
-      mesh.position.copy(fromPos).add(new THREE.Vector3(0, 0.65, 0));
-      scene.add(mesh);
-      const target = new THREE.Vector3(ball.position.x + state.x, ball.position.y + ballRadius + 0.9, ball.position.z + state.z);
-      const dir = target.clone().sub(mesh.position).normalize();
-      state.peanuts.push({ mesh, vel: dir.multiplyScalar(speed), life: 4 });
+    function updatePlayer(dt) {
+      if (!goblin) return;
+
+      const inputX = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
+      const inputZ = ((keys.KeyS || keys.ArrowDown) ? 1 : 0) - ((keys.KeyW || keys.ArrowUp) ? 1 : 0);
+
+      const moveVec = new THREE.Vector3(inputX, 0, inputZ);
+      const moving = moveVec.lengthSq() > 0;
+
+      if (moving) {
+        moveVec.normalize().multiplyScalar(player.moveSpeed * dt);
+        goblin.position.add(moveVec);
+        const yaw = Math.atan2(moveVec.x, moveVec.z);
+        goblin.rotation.y = yaw;
+      }
+
+      if (keys.Space && player.onGround) {
+        player.velocity.y = player.jumpSpeed;
+        player.onGround = false;
+        playAction('jump', 0.08);
+      }
+
+      player.velocity.y -= player.gravity * dt;
+      goblin.position.y += player.velocity.y * dt;
+
+      if (goblin.position.y <= 0) {
+        goblin.position.y = 0;
+        player.velocity.y = 0;
+        player.onGround = true;
+      }
+
+      if (!player.onGround) {
+        playAction('jump', 0.08);
+      } else if (moving && actions.walk) {
+        playAction('walk', 0.1);
+      } else {
+        playAction('idle', 0.2);
+      }
+
+      if (actions.jump && activeActionName === 'jump' && player.onGround) {
+        const jumpClipDone = actions.jump.time >= actions.jump.getClip().duration - 0.05;
+        if (jumpClipDone) {
+          playAction(moving && actions.walk ? 'walk' : 'idle', 0.1);
+          actions.jump.stop();
+        }
+      }
+
+      const camFollow = new THREE.Vector3(goblin.position.x, 2, goblin.position.z);
+      controls.target.lerp(camFollow, 0.12);
     }
 
     function resize() {
-      const w = mount.clientWidth;
-      const h = mount.clientHeight;
+      const w = app.clientWidth;
+      const h = app.clientHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h, false);
     }
+
     window.addEventListener('resize', resize);
     resize();
-
-    const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(0.033, clock.getDelta());
-
-      stripeGroup.rotation.y += dt * 0.07;
-      ring.material.opacity = 0.7 + Math.sin(clock.elapsedTime * 2.2) * 0.2;
-
-      if (state.running) {
-        state.score += dt * 10;
-        state.hitCd = Math.max(0, state.hitCd - dt);
-
-        const ix = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
-        const iz = ((keys.KeyS || keys.ArrowDown) ? 1 : 0) - ((keys.KeyW || keys.ArrowUp) ? 1 : 0);
-
-        const accel = 8.9;
-        const friction = 4.4;
-        const centerPull = 1.6;
-
-        state.vx += (ix * accel - state.x * centerPull) * dt;
-        state.vz += (iz * accel - state.z * centerPull) * dt;
-        state.vx *= Math.exp(-friction * dt);
-        state.vz *= Math.exp(-friction * dt);
-
-        state.x += state.vx * dt;
-        state.z += state.vz * dt;
-
-        const d = Math.hypot(state.x, state.z);
-        if (d > 2.2) {
-          const s = 2.2 / d;
-          state.x *= s; state.z *= s;
-          state.vx *= 0.45; state.vz *= 0.45;
-        }
-
-        if (d > 1.7) loseHeart('You almost fell off the ball');
-
-        magicians.forEach((m, i) => {
-          m.phase += dt;
-          m.mesh.position.y = -3.2 + Math.sin(m.phase * 2 + i) * 0.09;
-          m.cooldown -= dt;
-          if (m.cooldown <= 0) {
-            spawnPeanut(m.mesh.position, 5.2 + Math.random() * 2 + state.score * 0.02);
-            m.cooldown = Math.max(0.42, 1.25 - state.score * 0.003) + Math.random() * 0.7;
-          }
-        });
-
-        state.peanuts = state.peanuts.filter((p) => {
-          p.life -= dt;
-          p.mesh.position.addScaledVector(p.vel, dt);
-          p.mesh.rotation.x += dt * 10;
-          p.mesh.rotation.y += dt * 12;
-
-          const target = new THREE.Vector3(ball.position.x + state.x, ball.position.y + ballRadius + 0.95, ball.position.z + state.z);
-          if (p.mesh.position.distanceTo(target) < 0.45) {
-            scene.remove(p.mesh);
-            loseHeart('A peanut hit you');
-            return false;
-          }
-          if (p.life <= 0) { scene.remove(p.mesh); return false; }
-          return true;
-        });
-
-        ball.rotation.z += state.vx * dt * 0.8;
-        ball.rotation.x -= state.vz * dt * 0.8;
-
-        goblin.position.set(ball.position.x + state.x, ball.position.y + ballRadius + 0.4, ball.position.z + state.z);
-        goblin.rotation.z = -state.vx * 0.12;
-        goblin.rotation.x = state.vz * 0.12;
-
-        const camTarget = new THREE.Vector3(0, 2.2, 0);
-        camera.position.lerp(new THREE.Vector3(state.x * 1.8, 8.2, 15.5 + state.z * 0.45), 0.06);
-        camera.lookAt(camTarget);
-
-        statusEl.textContent = `Score ${Math.floor(state.score)} • Drift ${d.toFixed(2)} / 2.2`;
-      }
-
+      if (mixer) mixer.update(dt);
+      updatePlayer(dt);
+      controls.update();
       renderer.render(scene, camera);
     }
 
-    startBtn.addEventListener('click', reset);
-    overlay.style.display = 'grid';
+    initGoblin();
     animate();
   </script>
 </body>

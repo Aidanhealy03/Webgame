@@ -1,32 +1,37 @@
 # Webgame
 
-## Run locally
+A basic 3D HTML game scaffold that loads your local FBX goblin + FBX animations.
 
-This game is a single HTML file, so you can run it with any static web server.
+## 1) Put your files in the repo
 
-### Option 1: Python (quickest)
+Place your files like this (or edit `ASSET_PATHS` in `index.html`):
+
+```text
+assets/
+  goblin/
+    goblin.fbx
+    ...textures...
+  animations/
+    walk.fbx
+    jump.fbx
+```
+
+## 2) Run locally
 
 ```bash
 cd /workspace/Webgame
 python3 -m http.server 4173
 ```
 
-Then open:
-
-- `http://localhost:4173/index.html`
-
-### Option 2: Open directly
-
-You can also double-click `index.html` and open it in a browser, but using a local server is recommended.
+Open: `http://localhost:4173/index.html`
 
 ## Controls
 
-- **Move / balance:** `W A S D` or arrow keys
-- **Goal:** stay balanced on the ball and dodge peanut projectiles
-- **Lives:** 3 hearts
+- Move: `W A S D` (or arrow keys)
+- Jump: `Space`
 
-## Gameplay
+## Notes
 
-- Click **Start Show** to begin.
-- Survive as long as you can while your score rises.
-- If hearts hit zero, press **Start Show** to restart.
+- The game uses Three.js + FBXLoader from CDN.
+- If your files are in different locations, update `ASSET_PATHS` in `index.html`.
+- If your FBX exports are in centimeters, the included model scale (`0.01`) is usually correct.
